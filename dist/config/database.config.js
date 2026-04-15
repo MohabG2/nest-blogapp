@@ -5,11 +5,11 @@ const user_entity_1 = require("../users/entities/user.entity");
 const blog_entity_1 = require("../blogs/entities/blog.entity");
 const databaseConfig = () => ({
     type: 'postgres',
-    host: process.env.DB_HOST ?? 'localhost',
-    port: parseInt(process.env.DB_PORT ?? '5432', 10),
-    username: process.env.DB_USERNAME ?? 'postgres',
-    password: process.env.DB_PASSWORD ?? 'postgres',
-    database: process.env.DB_NAME ?? 'nest_blog',
+    host: process.env.DB_HOST,
+    port: parseInt(process.env.DB_PORT || '5432', 10),
+    username: process.env.DB_USERNAME,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
     entities: [user_entity_1.User, blog_entity_1.Blog],
     synchronize: process.env.NODE_ENV !== 'production',
     logging: process.env.NODE_ENV === 'development',
