@@ -9,20 +9,30 @@ import {
   Query,
   UseGuards,
   ParseUUIDPipe,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiConsumes,
   ApiOperation,
   ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+import { v4 as uuidv4 } from 'uuid';
 import { BlogsService } from './blogs.service';
 import { CreateBlogDto } from './dto/create-blog.dto';
 import { UpdateBlogDto } from './dto/update-blog.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { User } from '../users/entities/user.entity';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { User, UserRole } from '../users/entities/user.entity';
+import { FileValidationPipe } from './pipes/file-validation.pipe';
 
 @ApiTags('Blogs')
 @Controller('blogs')
@@ -33,15 +43,50 @@ export class BlogsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new blog post' })
-  @ApiResponse({ status: 201, description: 'Blog created' })
+  @ApiResponse({ status: 201, description: 'Blog created (pending admin approval)' })
   create(@Body() createBlogDto: CreateBlogDto, @CurrentUser() user: User) {
     return this.blogsService.create(createBlogDto, user);
   }
 
+  @Post(':id/image')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Upload an image for a blog post' })
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({ status: 201, description: 'Image uploaded and blog updated' })
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: diskStorage({
+        destination: './uploads',
+        filename: (_req, file, cb) => {
+          cb(null, `${uuidv4()}${extname(file.originalname)}`);
+        },
+      }),
+    }),
+  )
+  uploadImage(
+    @Param('id', ParseUUIDPipe) id: string,
+    @UploadedFile(new FileValidationPipe()) image: Express.Multer.File,
+    @CurrentUser() user: User,
+  ) {
+    return this.blogsService.updateImage(id, image, user.id);
+  }
+
+  @Patch(':id/approve')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Approve a blog post (admin only)' })
+  @ApiResponse({ status: 200, description: 'Blog approved and author notified' })
+  @ApiResponse({ status: 403, description: 'Forbidden – admin only' })
+  approve(@Param('id', ParseUUIDPipe) id: string) {
+    return this.blogsService.approve(id);
+  }
+
   @Get()
-  @ApiOperation({ summary: 'Get all blog posts' })
+  @ApiOperation({ summary: 'Get all approved blog posts' })
   @ApiQuery({ name: 'published', required: false, type: Boolean })
-  @ApiResponse({ status: 200, description: 'List of blog posts' })
+  @ApiResponse({ status: 200, description: 'List of approved blog posts' })
   findAll(@Query('published') published?: string) {
     const filter = published === undefined ? undefined : published === 'true';
     return this.blogsService.findAll(filter);

@@ -11,6 +11,11 @@ import { Exclude } from 'class-transformer';
 import * as bcrypt from 'bcrypt';
 import { Blog } from '../../blogs/entities/blog.entity';
 
+export enum UserRole {
+  USER = 'user',
+  ADMIN = 'admin',
+}
+
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
@@ -25,6 +30,9 @@ export class User {
   @Column()
   @Exclude()
   password: string;
+
+  @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
+  role: UserRole;
 
   @OneToMany(() => Blog, (blog) => blog.author, { lazy: true })
   blogs: Blog[];
