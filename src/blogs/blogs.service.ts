@@ -2,23 +2,25 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Inject,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import * as fs from 'fs';
-import * as path from 'path';
+import 'multer';
 import { Blog, BlogStatus } from './entities/blog.entity';
 import { CreateBlogDto } from './dto/create-blog.dto';
 import { UpdateBlogDto } from './dto/update-blog.dto';
 import { User } from '../users/entities/user.entity';
-import { MailService } from '../mail/mail.service';
+import { ClientProxy } from '@nestjs/microservices';
+import { S3Service } from '../s3/s3.service';
 
 @Injectable()
 export class BlogsService {
   constructor(
     @InjectRepository(Blog)
     private readonly blogRepository: Repository<Blog>,
-    private readonly mailService: MailService,
+    @Inject('BLOG_SERVICE') private readonly blogClient: ClientProxy,
+    private readonly s3Service: S3Service,
   ) {}
 
   create(createBlogDto: CreateBlogDto, author: User): Promise<Blog> {
@@ -45,17 +47,17 @@ export class BlogsService {
     return blog;
   }
 
-  async update(id: string, updateBlogDto: UpdateBlogDto, userId: string): Promise<Blog> {
+  async update(id: string, updateBlogDto: UpdateBlogDto, userId: string): Promise<void> {
     const blog = await this.findOne(id);
     if (blog.authorId !== userId) throw new ForbiddenException('Not your blog');
     Object.assign(blog, updateBlogDto);
-    return this.blogRepository.save(blog);
+    await this.blogRepository.save(blog);
   }
 
   async remove(id: string, userId: string): Promise<void> {
     const blog = await this.findOne(id);
     if (blog.authorId !== userId) throw new ForbiddenException('Not your blog');
-    if (blog.imageUrl) this.deleteImageFile(blog.imageUrl);
+    if (blog.imageUrl) await this.s3Service.deleteObject(blog.imageUrl);
     await this.blogRepository.remove(blog);
   }
 
@@ -63,9 +65,9 @@ export class BlogsService {
     const blog = await this.findOne(id);
     if (blog.authorId !== userId) throw new ForbiddenException('Not your blog');
 
-    if (blog.imageUrl) this.deleteImageFile(blog.imageUrl);
+    if (blog.imageUrl) await this.s3Service.deleteObject(blog.imageUrl);
 
-    blog.imageUrl = `/uploads/${image.filename}`;
+    blog.imageUrl = (image as Express.Multer.File & { location: string }).location;
     return this.blogRepository.save(blog);
   }
 
@@ -75,19 +77,13 @@ export class BlogsService {
     blog.published = true;
     const saved = await this.blogRepository.save(blog);
 
-    void this.mailService.sendBlogApprovedEmail(
-      { title: blog.title },
-      blog.author.email,
-    );
+    this.blogClient.emit('blog_approved', {
+      blogId: blog.id,
+      blogName: blog.title,
+      authorEmail: blog.author.email,
+      authorName: blog.author.username,
+    });
 
     return saved;
-  }
-
-  private deleteImageFile(imageUrl: string): void {
-    const filename = path.basename(imageUrl);
-    const filePath = path.join(process.cwd(), 'uploads', filename);
-    fs.unlink(filePath, (err) => {
-      if (err) console.error(`Failed to delete image file: ${filePath}`, err);
-    });
   }
 }

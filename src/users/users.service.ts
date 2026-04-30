@@ -33,7 +33,7 @@ export class UsersService {
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    return this.userRepository.findOne({ where: { email } });
+    return (await this.userRepository.findOne({ where: { email } })) ?? null;
   }
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {

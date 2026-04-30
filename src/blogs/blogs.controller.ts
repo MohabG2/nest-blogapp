@@ -21,9 +21,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import 'multer';
 import { BlogsService } from './blogs.service';
 import { CreateBlogDto } from './dto/create-blog.dto';
 import { UpdateBlogDto } from './dto/update-blog.dto';
@@ -54,16 +52,7 @@ export class BlogsController {
   @ApiOperation({ summary: 'Upload an image for a blog post' })
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 201, description: 'Image uploaded and blog updated' })
-  @UseInterceptors(
-    FileInterceptor('image', {
-      storage: diskStorage({
-        destination: './uploads',
-        filename: (_req, file, cb) => {
-          cb(null, `${uuidv4()}${extname(file.originalname)}`);
-        },
-      }),
-    }),
-  )
+  @UseInterceptors(FileInterceptor('image'))
   uploadImage(
     @Param('id', ParseUUIDPipe) id: string,
     @UploadedFile(new FileValidationPipe()) image: Express.Multer.File,
