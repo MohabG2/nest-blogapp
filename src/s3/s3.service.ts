@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { v4 as uuidv4 } from 'uuid';
-import * as multerS3 from 'multer-s3';
 import * as path from 'path';
 import { Request } from 'express';
 import 'multer';
+
+const multerS3 = require('multer-s3');
+
 
 @Injectable()
 export class S3Service {
