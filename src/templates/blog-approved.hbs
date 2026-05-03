@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }
+    .container { max-width: 600px; margin: 40px auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .header { background: #16a34a; padding: 32px; text-align: center; }
+    .header h1 { color: #fff; margin: 0; font-size: 24px; }
+    .body { padding: 32px; color: #333; }
+    .body h2 { margin-top: 0; }
+    .blog-title { background: #f0fdf4; border-left: 4px solid #16a34a; padding: 12px 16px; border-radius: 4px; font-weight: bold; color: #15803d; margin: 16px 0; }
+    .footer { padding: 16px 32px; background: #f9f9f9; text-align: center; font-size: 12px; color: #999; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Your Blog Has Been Approved!</h1>
+    </div>
+    <div class="body">
+      <h2>Great news!</h2>
+      <p>Your blog post has been reviewed and approved by our admin team. It is now publicly visible:</p>
+      <div class="blog-title">{{blogTitle}}</div>
+      <p>Thank you for contributing to Nest Blog. Keep writing!</p>
+    </div>
+    <div class="footer">
+      &copy; {{year}} Nest Blog. All rights reserved.
+    </div>
+  </div>
+</body>
+</html>
